@@ -5,7 +5,7 @@ class naive_bayes_classifier:
 
     def __init__(self):
         self.__data_frequency = {}
-        self.__binary_row = []
+        self.__result_row = []
         self.__unique_values = () #unique value names
         self.__has_frequency = False
     
@@ -28,8 +28,8 @@ class naive_bayes_classifier:
             #initialize classifiers
             col_list = csv_data.get_col_names()
             self.bool_name = col_list[-1]
-            self.__binary_row = csv_data.get_row_data(self.bool_name)
-            self.__unique_values = tuple(set(self.__binary_row))
+            self.__result_row = csv_data.get_row_data(self.bool_name)
+            self.__unique_values = tuple(set(self.__result_row))
 
             #check if we have our own data transformer
             if classifier_list == None:
@@ -90,7 +90,7 @@ class naive_bayes_classifier:
     def __process_row(self, csv_data, classifier):
         #classify data
         curr_row = csv_data.get_row_data(classifier.get_str_id())
-        classified_data = classifier.classify_data(self.__unique_values, curr_row, self.__binary_row)
+        classified_data = classifier.classify_data(self.__unique_values, curr_row, self.__result_row)
         return classified_data
 
     def __perform_laplace_smoothing(self, num, den, alpha, k_value):
@@ -99,15 +99,25 @@ class naive_bayes_classifier:
     def __perform_normal_computation(self, num, den, alpha, k_value):
         return num / den
 
+    def __perform_jelinek_mercer_smoothing(self, num, den, alpha, k_value):
+        background_prob = self.__perform_normal_computation(num, den, 0, 0)
+        return (1 - alpha) * num + alpha * background_prob
+    
+    def __perform_dirichlet_smoothing(self, num, den, alpha, k_value):
+        background_prob = self.__perform_normal_computation(num, den, 0, 0)
+        likelihood = (num + alpha * background_prob) / (den + alpha)
+        return likelihood
+
+
     def __compute(self, input_arr, item_index, need_smoothing):
-        entry_count = len(self.__binary_row)
-        occurence_count = self.__binary_row.count(self.__unique_values[item_index])
+        entry_count = len(self.__result_row)
+        occurence_count = self.__result_row.count(self.__unique_values[item_index])
         compute_op = self.__perform_laplace_smoothing if need_smoothing else self.__perform_normal_computation
 
         #denominator computation
         denominator = 1
         col_list = list(self.__data_frequency)
-        alpha = 1 #constant value???
+        alpha = 0.1 #constant value???
         k_value = len(col_list)
         for cd_index in range(len(self.__data_frequency)):
             input_key = input_arr[cd_index]
